@@ -21,13 +21,14 @@ export interface AdminUser {
 }
 
 // Student Authentication
-export const registerStudent = async (rollNo: string, password: string, name: string, faceData?: string): Promise<StudentUser> => {
+export const registerStudent = async (rollNo: string, password: string, name: string, email: string, faceData?: string): Promise<StudentUser> => {
   try {
     const studentId = `student_${rollNo}_${Date.now()}`;
     const studentData: StudentUser = {
       id: studentId,
       rollNo,
       name,
+      email,
       createdAt: new Date().toISOString(),
       role: 'student',
       faceData,
@@ -210,6 +211,47 @@ export const studentExists = async (rollNo: string): Promise<boolean> => {
     return false;
   } catch (error) {
     console.error('Error checking student existence:', error);
+    throw error;
+  }
+};
+
+export const getStudentByRollNoAndEmail = async (rollNo: string, email: string): Promise<StudentUser | null> => {
+  try {
+    const studentsRef = ref(database, 'students');
+    const snapshot = await get(studentsRef);
+
+    if (snapshot.exists()) {
+      const students = snapshot.val();
+      for (const student of Object.values(students)) {
+        const studentData = student as any;
+        if (studentData.rollNo === rollNo && studentData.email === email) {
+          return {
+            id: studentData.id,
+            rollNo: studentData.rollNo,
+            name: studentData.name,
+            email: studentData.email,
+            createdAt: studentData.createdAt,
+            role: 'student',
+            faceData: studentData.faceData,
+          };
+        }
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching student by roll no and email:', error);
+    throw error;
+  }
+};
+
+export const updateStudentPassword = async (studentId: string, newPassword: string): Promise<void> => {
+  try {
+    const studentRef = ref(database, `students/${studentId}`);
+    await update(studentRef, {
+      password: btoa(newPassword)
+    });
+  } catch (error) {
+    console.error('Error updating student password:', error);
     throw error;
   }
 };
